@@ -12,10 +12,20 @@ import HistoryPanel from './components/HistoryPanel';
 import RestaurantMap from './components/RestaurantMap';
 import FrequentManager from './components/FrequentManager';
 import AddRestaurantModal from './components/AddRestaurantModal';
+import LocationSettingsModal from './components/LocationSettingsModal';
+import type { OfficeLocation } from './components/LocationSettingsModal';
+import { MapPin, Star, Clock, Dices } from 'lucide-react';
 
 function App() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
+
+  const defaultOffice = { id: 'default', name: '삼성동 아이파크타워', lat: 37.5133, lng: 127.0614 };
+  const [savedOffices, setSavedOffices] = useState<OfficeLocation[]>([defaultOffice]);
+  const [activeOfficeId, setActiveOfficeId] = useState<string>('default');
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  const officeLoc = savedOffices.find(o => o.id === activeOfficeId) || savedOffices[0] || defaultOffice;
   
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -31,15 +41,43 @@ function App() {
   const [isSpinning, setIsSpinning] = useState(false);
 
   useEffect(() => {
-    fetchWeather().then(data => {
-      setWeather(data);
-      setWeatherLoading(false);
-    });
+    const legacy = localStorage.getItem('lunch_office_location');
+    const savedOffList = localStorage.getItem('lunch_saved_offices');
+    const savedActiveId = localStorage.getItem('lunch_active_office_id');
+
+    if (savedOffList) {
+      try {
+        const initialOffices = JSON.parse(savedOffList);
+        setSavedOffices(initialOffices);
+        if (savedActiveId && initialOffices.some((o: OfficeLocation) => o.id === savedActiveId)) {
+          setActiveOfficeId(savedActiveId);
+        } else {
+          setActiveOfficeId(initialOffices[0].id);
+        }
+      } catch(e) {}
+    } else if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy);
+        const migrated: OfficeLocation = { id: `legacy_${Date.now()}`, name: parsed.name, lat: parsed.lat, lng: parsed.lng };
+        setSavedOffices([migrated]);
+        setActiveOfficeId(migrated.id);
+        localStorage.setItem('lunch_saved_offices', JSON.stringify([migrated]));
+        localStorage.setItem('lunch_active_office_id', migrated.id);
+      } catch(e) {}
+    }
 
     setHistory(getHistory());
     setFrequentIdsState(getFrequentIds());
     setCustomRestaurants(getCustomRestaurants());
   }, []);
+
+  useEffect(() => {
+    setWeatherLoading(true);
+    fetchWeather(officeLoc.lat, officeLoc.lng).then(data => {
+      setWeather(data);
+      setWeatherLoading(false);
+    });
+  }, [officeLoc.lat, officeLoc.lng]);
 
   const refreshHistory = () => {
     setHistory(getHistory());
@@ -71,24 +109,6 @@ function App() {
     setIsAddModalOpen(true);
   };
 
-  // Base restaurants overshadowed by custom edits
-  const allRestaurants = RESTAURANTS.map(base => {
-    const customOverride = customRestaurants.find(c => c.id === base.id);
-    return customOverride || base;
-  }).concat(customRestaurants.filter(c => !RESTAURANTS.some(b => b.id === c.id)));
-
-  const dynamicRestaurants = allRestaurants.map(r => ({
-    ...r,
-    name: typeof r?.name === 'string' ? r.name : '이름 미상',
-    category: typeof r?.category === 'string' ? r.category : '기타',
-    weatherTags: (Array.isArray(r?.weatherTags) ? r.weatherTags : (typeof r?.weatherTags === 'string' ? [r.weatherTags] : ['any'])) as any,
-    menus: Array.isArray(r?.menus) ? r.menus : [],
-    lat: typeof r?.lat === 'number' && !isNaN(r.lat) ? r.lat : 37.5133,
-    lng: typeof r?.lng === 'number' && !isNaN(r.lng) ? r.lng : 127.0614,
-    isFrequent: r?.id ? frequentIds.includes(r.id) : false
-  }));
-
-
   const getDistanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -100,11 +120,38 @@ function App() {
     return R * c;
   };
 
+  // Base restaurants overshadowed by custom edits
+  const allRestaurants = RESTAURANTS.map(base => {
+    const customOverride = customRestaurants.find(c => c.id === base.id);
+    return customOverride || base;
+  }).concat(customRestaurants.filter(c => !RESTAURANTS.some(b => b.id === c.id)));
+
+  const dynamicRestaurants = allRestaurants.map(r => {
+    const lat = typeof r?.lat === 'number' && !isNaN(r.lat) ? r.lat : officeLoc.lat;
+    const lng = typeof r?.lng === 'number' && !isNaN(r.lng) ? r.lng : officeLoc.lng;
+    const dist = getDistanceInMeters(officeLoc.lat, officeLoc.lng, lat, lng);
+    // 60m/min walking speed, 1.4 urban Manhattan factor, +4min building exit overhead, min 5min
+    const rawWalk = Math.ceil((dist * 1.4) / 60);
+    const walkingTime = Math.max(5, rawWalk + 4);
+
+    return {
+      ...r,
+      name: typeof r?.name === 'string' ? r.name : '이름 미상',
+      category: typeof r?.category === 'string' ? r.category : '기타',
+      weatherTags: (Array.isArray(r?.weatherTags) ? r.weatherTags : (typeof r?.weatherTags === 'string' ? [r.weatherTags] : ['any'])) as any,
+      menus: Array.isArray(r?.menus) ? r.menus : [],
+      lat,
+      lng,
+      walkingTime,
+      isFrequent: r?.id ? frequentIds.includes(r.id) : false
+    };
+  });
+
   const fetchOverpassRestaurant = async (maxDist: number) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5초 내 응답 없으면 타임아웃 강제 취소
     try {
-      const query = `[out:json];node["amenity"~"restaurant|fast_food"]["name"!~"주막|주점|호프|포차|비어|펍|라운지|양꼬치|술집|포장마차|주류|바|맥주|브루어리|백세주"](around:${maxDist},37.5133,127.0614);out;`;
+      const query = `[out:json];node["amenity"~"restaurant|fast_food"]["name"!~"주막|주점|호프|포차|비어|펍|라운지|양꼬치|술집|포장마차|주류|바|맥주|브루어리|백세주"](around:${maxDist},${officeLoc.lat},${officeLoc.lng});out;`;
       const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -127,7 +174,7 @@ function App() {
 
       // 1. Filter spatially accessible restaurants and map distance
       const inRangeRestaurants = dynamicRestaurants.map(r => {
-        const dist = getDistanceInMeters(37.5133, 127.0614, r.lat, r.lng);
+        const dist = getDistanceInMeters(officeLoc.lat, officeLoc.lng, r.lat, r.lng);
         return { ...r, calculatedDistance: Math.round(dist) };
       }).filter(r => r.calculatedDistance <= maxDist);
 
@@ -181,11 +228,11 @@ function App() {
         });
         if (newNodes.length > 0) {
           const randNode = newNodes[Math.floor(Math.random() * newNodes.length)];
-          const distToNode = getDistanceInMeters(37.5133, 127.0614, randNode.lat, randNode.lon);
+          const distToNode = getDistanceInMeters(officeLoc.lat, officeLoc.lng, randNode.lat, randNode.lon);
           
           const mysteryHints = [
-            '가서 직접 확인해볼까요? 🕵️', '무슨 메뉴가 숨어있을까 🤫', '오늘의 신규 출현! 🥠', 
-            '숨은 맛집 스멜 👃', '미지로 모험을 떠나볼까요 ⛵', '동료들을 이꿀고 돌격! ⚔️'
+            '가서 직접 확인해볼까요?', '무슨 메뉴가 숨어있을까', '오늘의 신규 출현!', 
+            '숨은 맛집 스멜', '미지로 모험을 떠나볼까요', '동료들을 이끌고 돌격!'
           ];
           let menuHint = mysteryHints[Math.floor(Math.random() * mysteryHints.length)];
           if (randNode.tags.cuisine) {
@@ -198,7 +245,7 @@ function App() {
             };
             const cRaw = randNode.tags.cuisine.split(';')[0].toLowerCase();
             const translated = cMap[cRaw] || cRaw.toUpperCase();
-            menuHint = `🍽️ [${translated}] 메인 요리`;
+            menuHint = `[${translated}] 메인 요리`;
           }
 
           overpassMeal = {
@@ -210,6 +257,7 @@ function App() {
               isBlueRibbon: false,
               lat: randNode.lat,
               lng: randNode.lon,
+              walkingTime: Math.ceil((distToNode * 1.35) / 50),
               weatherTags: ['any'],
               menus: []
             },
@@ -337,36 +385,67 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', paddingBottom: '1rem' }}>
+      <header className="header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.8rem', paddingBottom: '1rem' }}>
         <div style={{ textAlign: 'center' }}>
-          <h1>오늘 뭐 먹지?</h1>
-          <p>현대아이파크타워 2 (강남구 영동대로 106길 5) 직장인 점심 추천</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button className="history-toggle-btn" style={{ position: 'relative' }} onClick={() => setIsFrequentManagerOpen(true)}>
-            ⭐ 단골 식당 및 식당 추가 ({frequentIds.length})
-          </button>
-          <button className="history-toggle-btn" style={{ position: 'relative' }} onClick={() => setIsHistoryOpen(true)}>
-            📸 최근 점심 로그 ({history.length})
-          </button>
+          <h1 style={{ color: '#ffffff', fontSize: '2.8rem', fontWeight: 900, margin: '0 0 0.3rem 0', letterSpacing: '-1px', textShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>오늘 뭐 먹지?</h1>
+          <p style={{ margin: 0 }}>
+            <span style={{ fontWeight: 700, color: '#e67e22', fontSize: '1.05rem', background: 'rgba(255, 255, 255, 0.9)', padding: '0.3rem 0.9rem', borderRadius: '20px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <MapPin size={16} /> {officeLoc.name}
+            </span>
+            <button 
+              onClick={() => setIsLocationModalOpen(true)}
+              style={{ marginLeft: '8px', background: 'rgba(255, 255, 255, 0.25)', color: 'white', fontWeight: 600, fontSize: '0.75rem', padding: '0.3rem 0.8rem', borderRadius: '20px', border: 'none', cursor: 'pointer', backdropFilter: 'blur(4px)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
+            >오피스 변경</button>
+          </p>
         </div>
       </header>
 
       <main className="main-content">
-        <WeatherWidget weather={weather} loading={weatherLoading} />
+        {/* White glass container wrapping map + overlay cards */}
+        <div className="main-glass-container">
+          {/* Stacked layout: map behind, cards on top */}
+          <div className="map-stack-wrapper">
+            {/* Base layer: full-width map */}
+            <div className="map-base-layer">
+              <RestaurantMap 
+                restaurants={dynamicRestaurants} 
+                recommendedMeals={recommendedMeals}
+                centerLat={officeLoc.lat} 
+                centerLng={officeLoc.lng} 
+              />
+            </div>
 
-        <div className="layout-grid">
-          <div className="left-panel">
-            <RestaurantMap 
-              restaurants={dynamicRestaurants} 
-              recommendedMeals={recommendedMeals}
-              centerLat={37.5133} 
-              centerLng={127.0614} 
-            />
+            {/* Overlay: info cards grid - smaller version */}
+            <div className="map-overlay-cards">
+              {/* Weather card */}
+              <div className="overlay-card">
+                <WeatherWidget weather={weather} loading={weatherLoading} />
+              </div>
+
+              {/* 단골 식당 card */}
+              <div className="overlay-card">
+                <div className="overlay-card-inner" onClick={() => setIsFrequentManagerOpen(true)}>
+                  <Star size={18} color="#ff8c00" fill="#ff8c00" />
+                  <div className="overlay-card-label">단골 식당</div>
+                  <div className="overlay-card-count" style={{ fontSize: '0.9rem' }}>{frequentIds.length}골</div>
+                </div>
+              </div>
+
+              {/* 최근 점심 로그 card */}
+              <div className="overlay-card">
+                <div className="overlay-card-inner" onClick={() => setIsHistoryOpen(true)}>
+                  <Clock size={18} color="#ff8c00" />
+                  <div className="overlay-card-label">점심 로그</div>
+                  <div className="overlay-card-count" style={{ fontSize: '0.9rem' }}>{history.length}건</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="right-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <button className="spin-btn" onClick={spin} disabled={isSpinning || weatherLoading}>
-              {isSpinning ? '가챠 도는 중...' : '🎲 점심 메뉴 추천받기'}
+
+          {/* Spin button + results - inside the glass container */}
+          <div style={{ padding: '0 0.5rem 0.5rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <button className="spin-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onClick={spin} disabled={isSpinning || weatherLoading}>
+              {isSpinning ? '가챠 도는 중...' : <><Dices size={20} /> 점심 메뉴 추천받기</>}
             </button>
 
             {(recommendedMeals.length > 0 || isSpinning) && (
@@ -379,6 +458,37 @@ function App() {
           </div>
         </div>
       </main>
+
+      <LocationSettingsModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        savedOffices={savedOffices}
+        activeOfficeId={activeOfficeId}
+        onSelectOffice={(id) => {
+          setActiveOfficeId(id);
+          localStorage.setItem('lunch_active_office_id', id);
+          setIsLocationModalOpen(false);
+          setRecommendedMeals([]);
+        }}
+        onAddOffice={(loc) => {
+          const updated = [...savedOffices, loc];
+          setSavedOffices(updated);
+          setActiveOfficeId(loc.id);
+          localStorage.setItem('lunch_saved_offices', JSON.stringify(updated));
+          localStorage.setItem('lunch_active_office_id', loc.id);
+          setRecommendedMeals([]);
+        }}
+        onDeleteOffice={(id) => {
+          const updated = savedOffices.filter(o => o.id !== id);
+          setSavedOffices(updated);
+          localStorage.setItem('lunch_saved_offices', JSON.stringify(updated));
+          if (activeOfficeId === id && updated.length > 0) {
+            setActiveOfficeId(updated[0].id);
+            localStorage.setItem('lunch_active_office_id', updated[0].id);
+            setRecommendedMeals([]);
+          }
+        }}
+      />
 
       <HistoryPanel 
         history={history}
@@ -395,7 +505,7 @@ function App() {
       />
 
       <FrequentManager 
-        restaurants={dynamicRestaurants}
+        restaurants={dynamicRestaurants.filter(r => getDistanceInMeters(officeLoc.lat, officeLoc.lng, r.lat, r.lng) <= 1500)}
         isOpen={isFrequentManagerOpen}
         onClose={() => setIsFrequentManagerOpen(false)}
         onToggle={handleToggleFrequent}
@@ -407,6 +517,7 @@ function App() {
       <AddRestaurantModal 
         isOpen={isAddModalOpen}
         initialData={editingRestaurant}
+        officeLoc={officeLoc}
         onClose={() => { setIsAddModalOpen(false); setEditingRestaurant(undefined); }}
         onAdd={handleAddCustomRestaurant}
       />

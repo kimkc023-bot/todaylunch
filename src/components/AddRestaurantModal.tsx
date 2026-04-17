@@ -3,9 +3,13 @@ import type { Restaurant } from '../types';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
+import { Star } from 'lucide-react';
+import type { OfficeLocation } from './LocationSettingsModal';
+
 interface Props {
   isOpen: boolean;
   initialData?: Restaurant;
+  officeLoc: OfficeLocation;
   onClose: () => void;
   onAdd: (r: Restaurant) => void;
 }
@@ -26,12 +30,12 @@ const customDragIcon = new L.Icon({
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
-const AddRestaurantModal: React.FC<Props> = ({ isOpen, initialData, onClose, onAdd }) => {
+const AddRestaurantModal: React.FC<Props> = ({ isOpen, initialData, officeLoc, onClose, onAdd }) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [menu, setMenu] = useState('');
   const [price, setPrice] = useState<number | ''>('');
-  const [pinPos, setPinPos] = useState({ lat: 37.5133, lng: 127.0614 });
+  const [pinPos, setPinPos] = useState({ lat: officeLoc.lat, lng: officeLoc.lng });
   const [isFrequent, setIsFrequent] = useState(true);
 
   useEffect(() => {
@@ -46,8 +50,10 @@ const AddRestaurantModal: React.FC<Props> = ({ isOpen, initialData, onClose, onA
       setPrice(initialData.menus?.[0]?.price || '');
       setPinPos({ lat: initialData.lat, lng: initialData.lng });
       setIsFrequent(initialData.isFrequent !== undefined ? initialData.isFrequent : true);
+    } else if (!initialData && isOpen) {
+      setPinPos({ lat: officeLoc.lat, lng: officeLoc.lng });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, officeLoc.lat, officeLoc.lng]);
 
   if (!isOpen) return null;
 
@@ -78,7 +84,7 @@ const AddRestaurantModal: React.FC<Props> = ({ isOpen, initialData, onClose, onA
     setCategory('');
     setMenu('');
     setPrice('');
-    setPinPos({ lat: 37.5133, lng: 127.0614 });
+    setPinPos({ lat: officeLoc.lat, lng: officeLoc.lng });
     setIsFrequent(true);
     onClose();
   };
@@ -97,7 +103,7 @@ const AddRestaurantModal: React.FC<Props> = ({ isOpen, initialData, onClose, onA
 
         {/* Mini Draggable Map */}
         <div style={{ height: '220px', width: '100%', marginBottom: '1rem', borderRadius: '12px', overflow: 'hidden', border: '1px solid #ccc', zIndex: 1 }}>
-          <MapContainer center={[37.5133, 127.0614]} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+          <MapContainer key={`loc-${isOpen}`} center={[officeLoc.lat, officeLoc.lng]} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             
             {/* Draggable Marker */}
@@ -165,7 +171,7 @@ const AddRestaurantModal: React.FC<Props> = ({ isOpen, initialData, onClose, onA
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
              <input type="checkbox" checked={isFrequent} onChange={e => setIsFrequent(e.target.checked)} id="freq-check" style={{ width: '1.2rem', height: '1.2rem', accentColor: '#3498db' }} />
-             <label htmlFor="freq-check" style={{ fontWeight: 600, color: '#34495e', cursor: 'pointer', fontSize: '0.9rem' }}>단골로 지정하기 (⭐ 메뉴 추천 확률 상승)</label>
+             <label htmlFor="freq-check" style={{ fontWeight: 600, color: '#34495e', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px' }}>단골로 지정하기 (<Star size={12} fill="#e74c3c" color="#e74c3c" /> 메뉴 추천 확률 상승)</label>
           </div>
           
           <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>

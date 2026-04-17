@@ -70,11 +70,11 @@ const RestaurantMap: React.FC<Props> = ({ restaurants, recommendedMeals, centerL
   };
 
   return (
-    <div className="map-container glass-panel">
+    <div className="map-container">
       <MapContainer 
         center={[centerLat, centerLng]} 
         zoom={16} 
-        style={{ height: '220px', width: '100%', borderRadius: '8px' }}
+        style={{ height: '460px', width: '100%' }}
       >
         <MapUpdater meals={recommendedMeals} centerLat={centerLat} centerLng={centerLng} />
         
@@ -126,23 +126,36 @@ const RestaurantMap: React.FC<Props> = ({ restaurants, recommendedMeals, centerL
             </Marker>
           ))
         )}
+        {/* Office Location Marker */}
+        <Marker position={[centerLat, centerLng]} icon={dotIcon('dark')}>
+          <Tooltip direction="top" offset={[0, -10]} opacity={1}>오피스 위치</Tooltip>
+        </Marker>
 
       </MapContainer>
-      
-      {recommendedMeals.length === 0 ? (
-        <div className="map-legend">
-          <span className="legend-item"><div className="mono-dot dark"></div> 오피스 위치</span>
-          <span className="legend-item"><div className="mono-dot primary"></div> 자동 등록 단골</span>
-          <span className="legend-item"><div className="mono-dot grey"></div> 일반 식당</span>
-        </div>
-      ) : (
-        <div className="map-legend" style={{marginTop: '15px' }}>
-          <span className="legend-item"><div className="mono-dot dark"></div> 오피스 위치</span>
-          <span className="legend-item"><span className="rank-legend-dot" style={{background: 'var(--text-dark)'}}></span> 1위 추천</span>
-          <span className="legend-item"><span className="rank-legend-dot" style={{background: 'var(--card-bg)'}}></span> 2~3위</span>
-          <span className="legend-item"><span className="rank-legend-dot" style={{background: 'var(--warning-color, #f39c12)', color: '#fff', fontSize: '10px'}}>🚀</span> 오늘의 도전</span>
-        </div>
-      )}
+
+      {/* Legend rendered as an absolute overlay inside map-container */}
+      <div style={{
+        position: 'absolute', top: 10, right: 10, zIndex: 1000,
+        background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)',
+        borderRadius: '10px', padding: '0.4rem 0.8rem',
+        display: 'flex', flexDirection: 'column', gap: '4px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '0.72rem',
+        fontWeight: 600, color: '#334155'
+      }}>
+        {recommendedMeals.length === 0 ? (
+          <>
+            <span className="legend-item"><div className="mono-dot dark"></div> 오피스</span>
+            <span className="legend-item"><div className="mono-dot primary"></div> 단골</span>
+            <span className="legend-item"><div className="mono-dot grey"></div> 일반</span>
+          </>
+        ) : (
+          <>
+            <span className="legend-item"><div className="mono-dot dark"></div> 오피스</span>
+            <span className="legend-item"><span className="rank-legend-dot" style={{background: 'var(--text-dark)'}}></span> 1위</span>
+            <span className="legend-item"><span className="rank-legend-dot" style={{background: 'var(--card-bg)'}}></span> 2~3위</span>
+          </>
+        )}
+      </div>
     </div>
   );
 };

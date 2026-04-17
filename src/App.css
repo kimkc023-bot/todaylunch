@@ -1,18 +1,18 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
 :root {
-  /* ONE Theme Color Concept */
-  --primary: #2563eb;       
-  --primary-dark: #1e40af;
-  --primary-hover: #1d4ed8;
-  --primary-light: #93c5fd;
-  --primary-faint: #eff6ff;
+  /* ONE Theme Color Concept (Orange Theme) */
+  --primary: #ff8c00;       
+  --primary-dark: #cc5e00;
+  --primary-hover: #e67e22;
+  --primary-light: #ffc180;
+  --primary-faint: #fff3e6;
   
   /* Achromatic Scale (Gray/White/Black) */
-  --bg-color: #f8fafc;
+  --bg-color: transparent;
   --card-bg: #ffffff;
   
-  --text-dark: #0f172a;
+  --text-dark: #5c3516;
   --text-main: #334155;
   --text-muted: #64748b;
   --text-light: #94a3b8;
@@ -25,6 +25,11 @@
   font-weight: 400;
   color: var(--text-main);
   background-color: var(--bg-color);
+}
+
+.header h1, .header p {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 html, body {
@@ -45,10 +50,113 @@ html, body {
   }
 }
 
+/* ─── Stacked Map Layout ─── */
+.map-stack-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 20px;
+  /* Do NOT clip here so overlay cards can show fully */
+}
+
+/* Map fills the full wrapper height */
+.map-base-layer {
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden; /* clip only the map tiles, not the overlay */
+}
+
+.leaflet-container {
+  border-radius: 20px;
+}
+
+/* Cards float over the bottom portion of the map */
+.map-overlay-cards {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000; /* above Leaflet tiles (z-index 200-400) */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.15) 0%, transparent 100%);
+  border-radius: 0 0 20px 20px;
+}
+
+@media (max-width: 768px) {
+  .map-overlay-cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+}
+
+/* Individual overlay card */
+.overlay-card {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18), 0 2px 6px rgba(211, 84, 0, 0.12);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-height: 72px; /* half of previous 110px min-height */
+}
+.overlay-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.22), 0 4px 10px rgba(211, 84, 0, 0.18);
+}
+
+/* Clickable inner content card (단골/로그) */
+.overlay-card-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.6rem 0.4rem;
+  cursor: pointer;
+  height: 100%;
+  text-align: center;
+}
+.overlay-card-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #2c3e50;
+}
+.overlay-card-sub {
+  font-size: 0.62rem;
+  color: #64748b;
+  font-weight: 500;
+  display: none; /* hidden in compact mode */
+}
+.overlay-card-count {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #ff8c00;
+  margin-top: 0.1rem;
+}
+
 .app-container {
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1rem;
+}
+
+/* ─── Main glass container: wraps map + spin + results ─── */
+.main-glass-container {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: none;
+  box-shadow:
+    0 30px 70px rgba(200, 80, 0, 0.25),
+    0 10px 30px rgba(255,255,255,0.3) inset;
+  overflow: hidden;
+  padding-bottom: 1rem;
 }
 
 /* Glass Panels & Modals - Neutralized */
@@ -79,25 +187,28 @@ button:hover {
   color: var(--primary-dark);
 }
 
-/* Spin Button */
+/* Spin Button - reduced margin when inside glass container */
 .spin-btn {
   width: 100%;
-  padding: 1.2rem;
-  font-size: 1.2rem;
-  font-weight: 700;
-  background: var(--text-dark);
-  color: white;
+  padding: 1rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--primary-color, #ff8c00);
   border: none;
-  border-radius: 12px;
-  margin: 1.5rem 0;
+  border-radius: 50px;
+  margin: 0.75rem 0 0.5rem 0;
   letter-spacing: 0.5px;
+  box-shadow: 0 10px 25px rgba(211, 84, 0, 0.2);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .spin-btn:hover:not(:disabled) {
-  background: black;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  background: #ffffff;
+  color: var(--primary-hover, #e67e22);
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(211, 84, 0, 0.3);
 }
 
 /* Modals */
@@ -117,7 +228,7 @@ button:hover {
 }
 
 /* Map specific styling */
-.map-container { margin: 1rem 0; }
+.map-container { position: relative; margin: 0; }
 
 .map-legend {
   margin-top: 10px;
@@ -177,25 +288,27 @@ button:hover {
 /* Premium Monochrome Recommendation Board */
 .premium-rec-board {
   padding: 1.5rem;
-  border-radius: 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none;
+  box-shadow: 0 20px 40px rgba(211, 84, 0, 0.15);
   display: flex; flex-direction: column; gap: 1rem;
 }
 
 .premium-first-place {
-  background: var(--card-bg);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
   padding: 1.5rem;
-  border: 2px solid var(--text-dark);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  border: none;
+  box-shadow: 0 15px 35px rgba(230, 126, 34, 0.15);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .premium-first-place:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 45px rgba(230, 126, 34, 0.25);
 }
 
 .premium-first-title {
@@ -213,10 +326,11 @@ button:hover {
 }
 
 .premium-runner-up {
-  background: var(--bg-color);
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
-  border-left: 4px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 8px 20px rgba(230, 126, 34, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -225,10 +339,9 @@ button:hover {
 }
 
 .premium-runner-up:hover {
-  background: var(--card-bg);
+  background: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border-color: var(--border-strong);
+  box-shadow: 0 12px 25px rgba(230, 126, 34, 0.18);
 }
 
 .premium-select-btn {

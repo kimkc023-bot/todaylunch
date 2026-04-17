@@ -1,5 +1,6 @@
 import React from 'react';
 import type { MealCandidate } from '../types';
+import { Trophy, Navigation, Footprints, Sparkles, Navigation2, Check } from 'lucide-react';
 
 interface Props {
   meals: MealCandidate[];
@@ -22,10 +23,10 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
           </div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--text-main)', margin: '0 0 0.8rem 0', animation: 'pulse 1.2s infinite' }}>
+          <p style={{ fontWeight: 900, fontSize: '1.2rem', color: '#ffffff', margin: '0 0 0.8rem 0', animation: 'pulse 1.2s infinite' }}>
             점심 가챠를 돌리는 중입니다...!
           </p>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>위성 스캔 중 📡 (최대 5초 소요)</span>
+          <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}><Navigation size={14} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '2px' }} /> 위성 스캔 중 (최대 2초 소요)</span>
         </div>
       </div>
     );
@@ -45,22 +46,23 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
   const getWalkTime = (m: MealCandidate) => {
     if (m.restaurant.walkingTime !== undefined) return m.restaurant.walkingTime;
     if (m.calculatedDistance !== undefined) {
-      const realDist = m.calculatedDistance * 1.35; // Manhattan distance approx
-      return Math.ceil(realDist / 70); // Walking speed: 70m/min
+      // Match App.tsx: 60m/min, ×1.4 Manhattan, +4min overhead, min 5min
+      const rawWalk = Math.ceil((m.calculatedDistance * 1.4) / 60);
+      return Math.max(5, rawWalk + 4);
     }
     return '?';
   };
 
   return (
     <div className="premium-rec-board fade-in">
-      <h2 style={{ textAlign: 'center', margin: '0 0 0.5rem 0', fontSize: '1.4rem', color: 'var(--text-muted)', fontWeight: 600 }}>오늘의 랭킹 결과</h2>
+      <h2 style={{ textAlign: 'center', margin: '0 0 0.5rem 0', fontSize: '1.4rem', color: '#ffffff', fontWeight: 800, textShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>오늘의 랭킹 결과</h2>
 
       {/* 1st Place Hero Card */}
       <div className="premium-first-place">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.2rem' }}>
-              <span style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '1.2rem', flexShrink: 0, marginTop: '2px' }}>1위</span>
+              <span style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '1.2rem', flexShrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}><Trophy size={20} color="#ff8c00" /> 1위</span>
               <h3 className="premium-first-title" style={{ margin: 0, wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
                 {firstPlace.menu?.name || firstPlace.restaurant.name}
               </h3>
@@ -72,7 +74,7 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
 
             <div style={{ marginBottom: '1rem' }}>
               <span className="tag neutral">{firstPlace.restaurant.category}</span>
-              <span className="tag neutral">도보 {getWalkTime(firstPlace)}분</span>
+              <span className="tag neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Footprints size={14} /> 도보 {getWalkTime(firstPlace)}분</span>
               {firstPlace.isFrequent ? 
                 <span className="tag frequent">단골</span> : 
                 <span className="tag rare">새로운 발견</span>
@@ -87,7 +89,7 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
               )}
               
               <div>
-                 <a href={`https://map.naver.com/p/search/${encodeURIComponent('삼성동 ' + firstPlace.restaurant.name)}`} target="_blank" rel="noreferrer" style={{color: '#00c73c', fontWeight: '800', textDecoration: 'none', fontSize: '0.9rem', display: 'inline-block', padding: '0.2rem 0.6rem', border: '1px solid #00c73c', borderRadius: '4px'}}>🔍 네이버 플레이스로 즉시 확인하기</a>
+                 <a href={`https://map.naver.com/p/search/${encodeURIComponent('삼성동 ' + firstPlace.restaurant.name)}`} target="_blank" rel="noreferrer" style={{color: '#00c73c', fontWeight: '800', textDecoration: 'none', fontSize: '0.9rem', display: 'inline-block', padding: '0.2rem 0.6rem', border: '1px solid #00c73c', borderRadius: '8px'}}><Navigation2 size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '4px' }}/>네이버 플레이스로 즉시 확인하기</a>
               </div>
             </div>
             
@@ -99,8 +101,8 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
             </div>
           </div>
           
-          <button onClick={() => onMarkEaten(firstPlace)} className="premium-select-btn dark" style={{ alignSelf: 'flex-end', padding: '0.8rem 1.5rem', fontSize: '1.05rem' }}>
-            점심 메뉴로 결정
+          <button onClick={() => onMarkEaten(firstPlace)} className="spin-btn" style={{ alignSelf: 'stretch', padding: '0.8rem 1.5rem', fontSize: '1.05rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', margin: 0 }}>
+            <Check size={18} /> 점심 메뉴로 결정
           </button>
         </div>
       </div>
@@ -123,22 +125,24 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
                 </div>
                 
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  <strong style={{ fontSize: '1.2rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.menu?.name || m.restaurant.name}</span>
-                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '1.2rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'flex-start', gap: '0.4rem', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                    <span>{m.menu?.name || m.restaurant.name}</span>
+                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginTop: '2px' }}>
                       {idx === 2 ? 
-                        <span style={{fontSize: '0.8rem', color: '#f39c12', fontWeight: 800}}>• 🚀</span> :
+                        <span style={{fontSize: '0.8rem', color: '#f39c12', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px'}}><Sparkles size={12} /> 도전</span> :
                         (m.isFrequent ? <span style={{fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 800}}>• 단골</span> : <span style={{fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 800}}>• 신규</span>)
                       }
                     </div>
                   </strong>
                   
+                  <div style={{ fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 600, wordBreak: 'keep-all', overflowWrap: 'break-word', marginBottom: '0.1rem' }}>
+                    {m.restaurant.name}
+                  </div>
+                  
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px', flexShrink: 1 }}>{m.restaurant.name}</span>
-                    <span style={{ flexShrink: 0 }}>|</span>
                     <span style={{ flexShrink: 0 }}>{m.restaurant.category}</span>
                     <span style={{ flexShrink: 0 }}>|</span>
-                    <span style={{ flexShrink: 0 }}>도보 {getWalkTime(m)}분</span>
+                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}><Footprints size={12} /> {getWalkTime(m)}분</span>
                     {m.menu?.price != null && (
                       <>
                         <span>|</span>
@@ -157,8 +161,8 @@ const RecommendationList: React.FC<Props> = ({ meals, onMarkEaten, spinning }) =
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end', marginLeft: 'auto' }}>
-                <a href={`https://map.naver.com/p/search/${encodeURIComponent('삼성동 ' + m.restaurant.name)}`} target="_blank" rel="noreferrer" style={{ color: '#00c73c', fontWeight: 800, textDecoration: 'none', fontSize: '0.75rem', border: '1px solid #00c73c', padding: '0.2rem 0.4rem', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                  🔍 플레이스
+                <a href={`https://map.naver.com/p/search/${encodeURIComponent('삼성동 ' + m.restaurant.name)}`} target="_blank" rel="noreferrer" style={{ color: '#00c73c', fontWeight: 800, textDecoration: 'none', fontSize: '0.75rem', border: '1px solid #00c73c', padding: '0.2rem 0.4rem', borderRadius: '6px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <Navigation2 size={12} /> 플레이스
                 </a>
                 <button onClick={() => onMarkEaten(m)} className="premium-select-btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                   선택

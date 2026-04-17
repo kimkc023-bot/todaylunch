@@ -3,20 +3,20 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  --bg-gradient-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-  --bg-gradient-dark: linear-gradient(135deg, #1f1c2c 0%, #928dab 100%);
+  color-scheme: light;
+  --bg-gradient-light: linear-gradient(135deg, #ffaf40 0%, #ff7b00 100%);
+  --bg-gradient-dark: linear-gradient(135deg, #cc5e00 0%, #994700 100%);
   
-  --glass-bg-light: rgba(255, 255, 255, 0.6);
-  --glass-border-light: rgba(255, 255, 255, 0.3);
+  --glass-bg-light: rgba(255, 255, 255, 0.95);
+  --glass-border-light: rgba(255, 255, 255, 0.5);
   --glass-bg-dark: rgba(30, 30, 30, 0.6);
   --glass-border-dark: rgba(255, 255, 255, 0.1);
 
   --text-main-light: #2c3e50;
   --text-main-dark: #ecf0f1;
   
-  --primary-color: #3498db;
-  --primary-hover: #2980b9;
+  --primary-color: #ff8c00;
+  --primary-hover: #e67e22;
   --danger-color: #e74c3c;
   --accent-color: #f1c40f;
 
@@ -38,12 +38,6 @@ body {
   overflow-x: hidden;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    background: var(--bg-gradient-dark);
-    color: var(--text-main-dark);
-  }
-}
 
 * {
   box-sizing: border-box;
@@ -63,11 +57,12 @@ button {
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 1rem;
+  box-shadow: 0 8px 20px rgba(230, 126, 34, 0.2);
 }
 
 button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 10px 25px rgba(230, 126, 34, 0.35);
 }
 
 button:active {
@@ -84,18 +79,10 @@ button.danger:hover {
 
 .glass-panel {
   background: var(--glass-bg-light);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none;
   border-radius: 20px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  box-shadow: 0 20px 40px rgba(211, 84, 0, 0.15);
   padding: 2rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  .glass-panel {
-    background: var(--glass-bg-dark);
-    border: 1px solid var(--glass-border-dark);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  }
 }

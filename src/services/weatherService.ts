@@ -1,13 +1,9 @@
 import type { WeatherData, WeatherCondition } from '../types';
 
-// Latitude and Longitude for Hyundai I-Park Tower 2
-const LAT = 37.5133;
-const LON = 127.0614;
-
-export const fetchWeather = async (): Promise<WeatherData> => {
+export const fetchWeather = async (lat: number, lon: number): Promise<WeatherData> => {
   try {
     // We use open-meteo which requires no API key.
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,precipitation,weather_code&timezone=Asia%2FSeoul`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code&timezone=Asia%2FSeoul`;
     
     const response = await fetch(url);
     if (!response.ok) {
